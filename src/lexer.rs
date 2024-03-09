@@ -41,10 +41,7 @@ impl Lexer {
 
         let tok = match ch {
             '\0' => Token::Eof,
-            '=' if self.peek() == '=' => {
-                self.advance();
-                Token::EqEq
-            }
+            '=' if self.match_next('=') => Token::EqEq,
             '=' => Token::Eq,
             '+' => Token::Plus,
             '-' if self.peek().is_digit(10) => self.read_number(),
@@ -52,10 +49,7 @@ impl Lexer {
             '!' if self.match_next('=') => Token::BangEq,
             '!' => Token::Bang,
             '*' => Token::Asterisk,
-            '/' if self.match_next('/') => {
-                self.skip_line();
-                return self.next_token();
-            }
+            '/' if self.match_next('/') => self.skip_line(),
             '/' => Token::Slash,
             '<' => Token::LessThan,
             '>' => Token::GreaterThan,
@@ -178,10 +172,11 @@ impl Lexer {
         Token::String(self.input[pos..self.position].to_string())
     }
 
-    fn skip_line(&mut self) {
+    fn skip_line(&mut self) -> Token {
         while self.ch != '\n' && self.ch != '\0' {
             self.advance();
         }
+        self.next_token()
     }
 
     fn advance(&mut self) {
