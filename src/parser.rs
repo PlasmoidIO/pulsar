@@ -72,8 +72,25 @@ macro_rules! push_program {
                     continue;
                 }
             }
-            _ => eat!($self, Token::Semicolon),
+            Expression::If {
+                consequence,
+                alternative,
+                ..
+            } => match alternative {
+                Some(alt) => {
+                    if let Expression::Block(_) = **alt {
+                        continue;
+                    }
+                }
+                None => {
+                    if let Expression::Block(_) = **consequence {
+                        continue;
+                    }
+                }
+            },
+            _ => {}
         }
+        eat!($self, Token::Semicolon);
     };
 }
 
@@ -122,8 +139,25 @@ impl Parser {
             Token::LBrace => self.block(),
             Token::Let => self.let_expression(),
             Token::Function => self.function_expression(),
+            Token::If => self.if_expression(),
             _ => self.assignment(),
         }
+    }
+
+    fn if_expression(&mut self) -> Result<Expression, ParseError> {
+        eat!(self, Token::If);
+        let condition = self.expression()?;
+        let consequence = self.expression();
+        let alternative = if self.nibble(Token::Else) {
+            Some(Box::new(self.expression()?))
+        } else {
+            None
+        };
+        Ok(Expression::If {
+            condition: Box::new(condition),
+            consequence: Box::new(consequence?),
+            alternative,
+        })
     }
 
     fn function_expression(&mut self) -> Result<Expression, ParseError> {
