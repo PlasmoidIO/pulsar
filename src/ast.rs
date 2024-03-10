@@ -36,6 +36,11 @@ pub enum Expression {
         parameters: Vec<String>,
         body: Box<Expression>,
     },
+    For {
+        ident: String,
+        expr: Box<Expression>,
+        body: Box<Expression>,
+    },
 }
 
 #[derive(PartialEq, Debug, Clone)]

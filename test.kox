@@ -1,0 +1,11 @@
+let thing = 5;
+let otherThing = "hello world";
+let hello = 'hi';
+
+for i in thing {
+    log("hi");
+}
+
+fn thing() {
+    log("hi");
+}

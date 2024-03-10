@@ -2,6 +2,8 @@ use std::env;
 
 use parser::Parser;
 
+use crate::lexer::Lexer;
+
 mod ast;
 mod lexer;
 mod parser;
@@ -22,10 +24,16 @@ fn run_file(filepath: &str) {
     let contents =
         std::fs::read_to_string(filepath).expect("Something went wrong reading the file");
 
-    let mut parser = Parser::new(contents);
-    let ast = parser.expression();
+    let mut parser = Parser::new(contents.clone());
+    let ast = parser.parse_program();
     match ast {
-        Ok(ast) => println!("{:?}", ast),
-        Err(e) => eprintln!("Error: {}", e),
+        Ok(ast) => {
+            // map Vec<Expression> to Vec<String>
+            let ast_string: Vec<String> = ast.iter().map(|e| format!("{}", e)).collect();
+            println!("{}", ast_string.join("\n"));
+        }
+        Err(e) => {
+            eprintln!("Error: {}", e);
+        }
     }
 }

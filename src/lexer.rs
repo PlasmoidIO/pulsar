@@ -10,6 +10,7 @@ pub struct Lexer {
     pub column: usize,
 }
 
+#[derive(Debug)]
 pub struct LexerErrorInfo {
     pub line: usize,
     pub column: usize,

@@ -32,10 +32,47 @@ macro_rules! eat {
     ($self:ident, $token:expr) => {
         if !$self.nibble($token) {
             return Err(ParseError {
-                message: format!("expected {}", $token),
+                message: format!("expected {:?}", $token),
                 line: $self.line,
                 column: $self.column,
             });
+        }
+    };
+}
+
+macro_rules! eat_identifier {
+    ($self:ident) => {
+        match $self.lookahead.clone() {
+            Token::Ident(ident) => {
+                $self.lookahead = $self.next_token();
+                ident
+            }
+            _ => {
+                return Err(ParseError {
+                    message: "expected identifier".to_string(),
+                    line: $self.line,
+                    column: $self.column,
+                })
+            }
+        }
+    };
+}
+
+macro_rules! push_program {
+    ($self:ident, $program:ident) => {
+        $program.push($self.expression()?);
+        match $program.last().unwrap() {
+            Expression::For { body, .. } => {
+                if let Expression::Block(_) = **body {
+                    continue;
+                }
+            }
+            Expression::Function { body, .. } => {
+                if let Expression::Block(_) = **body {
+                    continue;
+                }
+            }
+            _ => eat!($self, Token::Semicolon),
         }
     };
 }
@@ -70,26 +107,76 @@ impl Parser {
         eq
     }
 
+    pub fn parse_program(&mut self) -> Result<Vec<Expression>, ParseError> {
+        let mut program: Vec<Expression> = vec![];
+        while !self.is(Token::Eof) {
+            push_program!(self, program);
+        }
+        Ok(program)
+    }
+
     pub fn expression(&mut self) -> Result<Expression, ParseError> {
         // TODO: implement statements (which are really just expressions...)
-        self.assignment()
+        match self.lookahead {
+            Token::For => self.for_expression(),
+            Token::LBrace => self.block(),
+            Token::Let => self.let_expression(),
+            Token::Function => self.function_expression(),
+            _ => self.assignment(),
+        }
+    }
+
+    fn function_expression(&mut self) -> Result<Expression, ParseError> {
+        eat!(self, Token::Function);
+        let name = eat_identifier!(self);
+        eat!(self, Token::LParen);
+        let mut parameters: Vec<String> = vec![];
+        if !self.is(Token::RParen) {
+            parameters.push(eat_identifier!(self));
+            while self.nibble(Token::Comma) {
+                parameters.push(eat_identifier!(self));
+            }
+        }
+        eat!(self, Token::RParen);
+        Ok(Expression::Function {
+            name,
+            parameters,
+            body: Box::new(self.expression()?),
+        })
+    }
+
+    fn let_expression(&mut self) -> Result<Expression, ParseError> {
+        eat!(self, Token::Let);
+        let ident = eat_identifier!(self);
+        eat!(self, Token::Eq);
+        let value = self.expression()?;
+        Ok(Expression::Let {
+            name: ident,
+            value: Box::new(value),
+        })
+    }
+
+    fn block(&mut self) -> Result<Expression, ParseError> {
+        eat!(self, Token::LBrace);
+        let mut statements: Vec<Expression> = vec![];
+        while !self.is(Token::RBrace) {
+            push_program!(self, statements);
+        }
+        eat!(self, Token::RBrace);
+        Ok(Expression::Block(statements))
     }
 
     fn for_expression(&mut self) -> Result<Expression, ParseError> {
         eat!(self, Token::For);
 
-        let ident = match self.lookahead.clone() {
-            Token::Ident(ident) => ident,
-            _ => {
-                return Err(ParseError {
-                    message: "expected identifier".to_string(),
-                    line: self.line,
-                    column: self.column,
-                })
-            }
-        };
-
-        // checkpoint
+        let ident = eat_identifier!(self);
+        eat!(self, Token::In);
+        let expr = self.expression()?;
+        Ok(Expression::For {
+            ident,
+            expr: Box::new(expr),
+            body: Box::new(self.block()?),
+        })
     }
 
     fn assignment(&mut self) -> Result<Expression, ParseError> {
@@ -249,18 +336,24 @@ impl Parser {
         }
 
         let tok = self.lookahead.clone();
-        self.lookahead = self.next_token();
-        match tok {
+        let ret = match tok {
             Token::True => Ok(Expression::Value(Value::Boolean(true))),
             Token::False => Ok(Expression::Value(Value::Boolean(false))),
             Token::Int(i) => Ok(Expression::Value(Value::Int(i))),
             Token::Float(f) => Ok(Expression::Value(Value::Float(f))),
             Token::String(s) => Ok(Expression::Value(Value::String(s))),
+            Token::Illegal(error) => Err(ParseError {
+                message: error,
+                line: self.lexer.line,
+                column: self.lexer.column,
+            }),
             _ => Err(ParseError {
                 message: format!("unexpected token: {:?}", tok),
                 line: self.lexer.line,
                 column: self.lexer.column,
             }),
-        }
+        };
+        self.lookahead = self.next_token();
+        ret
     }
 }
