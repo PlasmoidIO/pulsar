@@ -1,4 +1,5 @@
 use crate::token::Token;
+use std::fmt::Display;
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum Expression {
@@ -11,14 +12,30 @@ pub enum Expression {
         function: Box<Expression>,
         arguments: Vec<Expression>,
     },
-    Identifier {
-        value: String,
-    },
+    Identifier(String),
     Assign {
         name: String,
         value: Box<Expression>,
     },
     Value(Value),
+    Let {
+        name: String,
+        value: Box<Expression>,
+    },
+    Return {
+        value: Box<Expression>,
+    },
+    Block(Vec<Expression>),
+    If {
+        condition: Box<Expression>,
+        consequence: Box<Expression>,
+        alternative: Option<Box<Expression>>,
+    },
+    Function {
+        name: String,
+        parameters: Vec<String>,
+        body: Box<Expression>,
+    },
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -30,29 +47,14 @@ pub enum Value {
     Nil,
 }
 
-#[derive(PartialEq, Debug, Clone)]
-pub enum Statement {
-    Let {
-        name: String,
-        value: Expression,
-    },
-    Return {
-        value: Expression,
-    },
-    Expression {
-        value: Expression,
-    },
-    Block {
-        statements: Vec<Statement>,
-    },
-    If {
-        condition: Expression,
-        consequence: Box<Statement>,
-        alternative: Option<Box<Statement>>,
-    },
-    Function {
-        name: String,
-        parameters: Vec<String>,
-        body: Box<Statement>,
-    },
+impl Display for Expression {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }

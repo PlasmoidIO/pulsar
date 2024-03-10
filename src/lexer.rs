@@ -6,8 +6,8 @@ pub struct Lexer {
     position: usize,
     ch: char,
     input: String,
-    line: usize,
-    column: usize,
+    pub line: usize,
+    pub column: usize,
 }
 
 pub struct LexerErrorInfo {
@@ -49,9 +49,12 @@ impl Lexer {
             '!' if self.match_next('=') => Token::BangEq,
             '!' => Token::Bang,
             '*' => Token::Asterisk,
+            '^' => Token::Pow,
             '/' if self.match_next('/') => self.skip_line(),
             '/' => Token::Slash,
+            '<' if self.match_next('=') => Token::LessThanEqual,
             '<' => Token::LessThan,
+            '>' if self.match_next('=') => Token::GreaterThanEqual,
             '>' => Token::GreaterThan,
             ',' => Token::Comma,
             ';' => Token::Semicolon,
@@ -152,6 +155,8 @@ impl Lexer {
             "if" => Token::If,
             "else" => Token::Else,
             "return" => Token::Return,
+            "for" => Token::For,
+            "in" => Token::In,
             _ => Token::Ident(ident.to_string()),
         }
     }

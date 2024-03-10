@@ -1,5 +1,7 @@
 use std::env;
 
+use parser::Parser;
+
 mod ast;
 mod lexer;
 mod parser;
@@ -20,8 +22,10 @@ fn run_file(filepath: &str) {
     let contents =
         std::fs::read_to_string(filepath).expect("Something went wrong reading the file");
 
-    match lexer::Lexer::lex(contents) {
-        Ok(tokens) => println!("{:?}", tokens),
-        Err(e) => eprintln!("{}", e),
+    let mut parser = Parser::new(contents);
+    let ast = parser.expression();
+    match ast {
+        Ok(ast) => println!("{:?}", ast),
+        Err(e) => eprintln!("Error: {}", e),
     }
 }

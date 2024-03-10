@@ -15,8 +15,11 @@ pub enum Token {
     Bang,
     Asterisk,
     Slash,
+    Pow,
     LessThan,
     GreaterThan,
+    LessThanEqual,
+    GreaterThanEqual,
     EqEq,
     BangEq,
     Comma,
@@ -33,6 +36,8 @@ pub enum Token {
     If,
     Else,
     Return,
+    For,
+    In,
 }
 
 impl fmt::Display for Token {
