@@ -1,10 +1,10 @@
 use std::env;
 
+use interpreter::Interpreter;
 use parser::Parser;
 
-use crate::lexer::Lexer;
-
 mod ast;
+mod interpreter;
 mod lexer;
 mod parser;
 mod repl;
@@ -29,8 +29,14 @@ fn run_file(filepath: &str) {
     match ast {
         Ok(ast) => {
             // map Vec<Expression> to Vec<String>
-            let ast_string: Vec<String> = ast.iter().map(|e| format!("{}", e)).collect();
-            println!("{}", ast_string.join("\n"));
+            let mut interpreter = Interpreter::new();
+            let result = interpreter.evaluate_program(ast);
+            match result {
+                Ok(_) => {}
+                Err(e) => {
+                    eprintln!("runtime error: {}", e);
+                }
+            }
         }
         Err(e) => {
             eprintln!("Error: {}", e);

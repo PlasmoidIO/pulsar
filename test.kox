@@ -1,15 +1,5 @@
-let thing = 5;
-let otherThing = "hello world";
-let hello = 'hi';
-
-for i in thing {
-    log("hi");
+fn thing(name) {
+    print("Hello !");
 }
 
-fn thing() {
-    log("hi");
-}
-
-if a > b {
-    thing();
-} else log("hi");
+thing(1);

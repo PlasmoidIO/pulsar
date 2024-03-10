@@ -1,0 +1,28 @@
+Function {
+    name: "thing",
+    parameters: [],
+    body: Block {
+        expressions: [
+            Identifier {
+                ident: "thing",
+                line: 2,
+                column: 10,
+            },
+            Identifier {
+                ident: "thing",
+                line: 3,
+                column: 10,
+            },
+            Identifier {
+                ident: "thing",
+                line: 4,
+                column: 10,
+            },
+            Void,
+        ],
+        line: 5,
+        column: 2,
+    },
+    line: 5,
+    column: 2,
+}

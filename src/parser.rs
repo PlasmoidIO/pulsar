@@ -63,12 +63,12 @@ macro_rules! push_program {
         $program.push($self.expression()?);
         match $program.last().unwrap() {
             Expression::For { body, .. } => {
-                if let Expression::Block(_) = **body {
+                if let Expression::Block { .. } = **body {
                     continue;
                 }
             }
             Expression::Function { body, .. } => {
-                if let Expression::Block(_) = **body {
+                if let Expression::Block { .. } = **body {
                     continue;
                 }
             }
@@ -78,19 +78,18 @@ macro_rules! push_program {
                 ..
             } => match alternative {
                 Some(alt) => {
-                    if let Expression::Block(_) = **alt {
+                    if let Expression::Block { .. } = **alt {
                         continue;
                     }
                 }
                 None => {
-                    if let Expression::Block(_) = **consequence {
+                    if let Expression::Block { .. } = **consequence {
                         continue;
                     }
                 }
             },
             _ => {}
         }
-        eat!($self, Token::Semicolon);
     };
 }
 
@@ -128,6 +127,7 @@ impl Parser {
         let mut program: Vec<Expression> = vec![];
         while !self.is(Token::Eof) {
             push_program!(self, program);
+            eat!(self, Token::Semicolon);
         }
         Ok(program)
     }
@@ -140,8 +140,19 @@ impl Parser {
             Token::Let => self.let_expression(),
             Token::Function => self.function_expression(),
             Token::If => self.if_expression(),
+            Token::Return => self.return_expression(),
             _ => self.assignment(),
         }
+    }
+
+    fn return_expression(&mut self) -> Result<Expression, ParseError> {
+        eat!(self, Token::Return);
+        let value = self.expression()?;
+        Ok(Expression::Return {
+            value: Box::new(value),
+            line: self.line,
+            column: self.column,
+        })
     }
 
     fn if_expression(&mut self) -> Result<Expression, ParseError> {
@@ -157,6 +168,8 @@ impl Parser {
             condition: Box::new(condition),
             consequence: Box::new(consequence?),
             alternative,
+            line: self.line,
+            column: self.column,
         })
     }
 
@@ -176,6 +189,8 @@ impl Parser {
             name,
             parameters,
             body: Box::new(self.expression()?),
+            line: self.line,
+            column: self.column,
         })
     }
 
@@ -187,17 +202,46 @@ impl Parser {
         Ok(Expression::Let {
             name: ident,
             value: Box::new(value),
+            line: self.line,
+            column: self.column,
         })
     }
 
     fn block(&mut self) -> Result<Expression, ParseError> {
         eat!(self, Token::LBrace);
         let mut statements: Vec<Expression> = vec![];
+
+        let mut semicolon = true;
         while !self.is(Token::RBrace) {
+            if !semicolon {
+                return Err(ParseError {
+                    message: "expected semicolon".to_string(),
+                    line: self.line,
+                    column: self.column,
+                });
+            }
+
+            semicolon = false;
             push_program!(self, statements);
+            if self.nibble(Token::Semicolon) {
+                semicolon = true;
+            }
         }
+
+        if semicolon {
+            statements.push(Expression::Value {
+                value: Value::Nil,
+                line: self.line,
+                column: self.column,
+            });
+        }
+
         eat!(self, Token::RBrace);
-        Ok(Expression::Block(statements))
+        Ok(Expression::Block {
+            expressions: statements,
+            line: self.line,
+            column: self.column,
+        })
     }
 
     fn for_expression(&mut self) -> Result<Expression, ParseError> {
@@ -210,6 +254,8 @@ impl Parser {
             ident,
             expr: Box::new(expr),
             body: Box::new(self.block()?),
+            line: self.line,
+            column: self.column,
         })
     }
 
@@ -219,10 +265,12 @@ impl Parser {
         if self.nibble(Token::Eq) {
             let value = self.assignment();
             match expr {
-                Expression::Identifier(ident) => {
+                Expression::Identifier { ident, .. } => {
                     return Ok(Expression::Assign {
                         name: ident,
                         value: Box::new(value?),
+                        line: self.line,
+                        column: self.column,
                     })
                 }
                 _ => {
@@ -248,6 +296,8 @@ impl Parser {
                 left: Box::new(expr),
                 operator: op,
                 right: Box::new(self.comparison()?),
+                line: self.line,
+                column: self.column,
             };
         }
 
@@ -267,6 +317,8 @@ impl Parser {
             expr = Expression::Binary {
                 left: Box::new(expr),
                 operator: op,
+                line: self.line,
+                column: self.column,
                 right: Box::new(self.term()?),
             };
         }
@@ -284,6 +336,8 @@ impl Parser {
                 left: Box::new(expr),
                 operator: op,
                 right: Box::new(self.factor()?),
+                line: self.line,
+                column: self.column,
             };
         }
 
@@ -300,6 +354,8 @@ impl Parser {
                 left: Box::new(expr),
                 operator: op,
                 right: Box::new(self.exponential()?),
+                line: self.line,
+                column: self.column,
             };
         }
 
@@ -314,6 +370,8 @@ impl Parser {
                 left: Box::new(expr),
                 operator: Token::Pow,
                 right: Box::new(self.unary()?),
+                line: self.line,
+                column: self.column,
             };
         }
 
@@ -351,6 +409,8 @@ impl Parser {
             return Ok(Expression::Call {
                 function: Box::new(callee),
                 arguments: args,
+                line: self.line,
+                column: self.column,
             });
         }
 
@@ -366,16 +426,40 @@ impl Parser {
 
         if let Token::Ident(ident) = self.lookahead.clone() {
             self.lookahead = self.next_token();
-            return Ok(Expression::Identifier(ident));
+            return Ok(Expression::Identifier {
+                ident,
+                line: self.line,
+                column: self.column,
+            });
         }
 
         let tok = self.lookahead.clone();
         let ret = match tok {
-            Token::True => Ok(Expression::Value(Value::Boolean(true))),
-            Token::False => Ok(Expression::Value(Value::Boolean(false))),
-            Token::Int(i) => Ok(Expression::Value(Value::Int(i))),
-            Token::Float(f) => Ok(Expression::Value(Value::Float(f))),
-            Token::String(s) => Ok(Expression::Value(Value::String(s))),
+            Token::True => Ok(Expression::Value {
+                value: Value::Boolean(true),
+                line: self.line,
+                column: self.column,
+            }),
+            Token::False => Ok(Expression::Value {
+                value: Value::Boolean(false),
+                line: self.line,
+                column: self.column,
+            }),
+            Token::Int(i) => Ok(Expression::Value {
+                value: Value::Int(i),
+                line: self.line,
+                column: self.column,
+            }),
+            Token::Float(f) => Ok(Expression::Value {
+                value: Value::Float(f),
+                line: self.line,
+                column: self.column,
+            }),
+            Token::String(s) => Ok(Expression::Value {
+                value: Value::String(s),
+                line: self.line,
+                column: self.column,
+            }),
             Token::Illegal(error) => Err(ParseError {
                 message: error,
                 line: self.lexer.line,
