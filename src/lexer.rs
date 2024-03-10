@@ -70,8 +70,19 @@ impl Lexer {
         tok
     }
 
+    pub fn new(input: String) -> Self {
+        let ch = input.chars().nth(0).unwrap();
+        Self {
+            position: 0,
+            ch,
+            input,
+            line: 1,
+            column: 0,
+        }
+    }
+
     pub fn lex(input: String) -> Result<Vec<Token>, LexerErrorInfo> {
-        let mut lexer = Lexer::new_lexer(input);
+        let mut lexer = Lexer::new(input);
         let mut tokens: Vec<Token> = vec![];
         let mut token = lexer.next_token();
         while token != Token::Eof {
@@ -88,18 +99,6 @@ impl Lexer {
         }
 
         Ok(tokens)
-    }
-
-    fn new_lexer(input: String) -> Self {
-        let mut lexer = Lexer {
-            position: 0,
-            ch: '\0',
-            line: 1,
-            column: 0,
-            input,
-        };
-        lexer.ch = lexer.read_char_at(0);
-        lexer
     }
 
     fn match_next(&mut self, expected: char) -> bool {

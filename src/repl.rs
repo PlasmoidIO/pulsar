@@ -1,4 +1,4 @@
-use std::{f32::consts::E, io::stdin};
+use std::io::stdin;
 
 use crate::lexer::Lexer;
 
