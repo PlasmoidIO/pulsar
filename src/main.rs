@@ -30,7 +30,7 @@ fn run_file(filepath: &str) {
         Ok(ast) => {
             // map Vec<Expression> to Vec<String>
             let mut interpreter = Interpreter::new();
-            let result = interpreter.evaluate_program(ast);
+            let result = interpreter.evaluate_program(ast, &mut interpreter.global_environment());
             match result {
                 Ok(_) => {}
                 Err(e) => {

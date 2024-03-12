@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Display, mem::discriminant};
+use std::{collections::HashMap, env, fmt::Display, mem::discriminant};
 
 use crate::{ast::Expression, ast::Value, token::Token};
 
@@ -38,6 +38,10 @@ impl Interpreter {
         Self {
             global_environment: env,
         }
+    }
+
+    pub fn global_environment(&self) -> Environment {
+        self.global_environment.clone()
     }
 
     fn evaluate_binary(
@@ -95,11 +99,17 @@ impl Interpreter {
         }
     }
 
-    pub fn evaluate_program(&mut self, program: Vec<Expression>) -> Result<KoxValue, RuntimeError> {
+    pub fn evaluate_program(
+        &mut self,
+        program: Vec<Expression>,
+        env: &mut Environment,
+    ) -> Result<KoxValue, RuntimeError> {
         let mut result = KoxValue::Nil;
-        let mut env = self.global_environment.clone();
         for expr in program {
-            result = self.evaluate(expr, &mut env)?;
+            result = match self.evaluate(expr, env)? {
+                KoxValue::Return(value) => return Ok(*value),
+                value => value,
+            };
         }
         Ok(result)
     }
@@ -203,18 +213,12 @@ impl Interpreter {
                 environment.insert(name, value.clone());
                 Ok(value)
             }
-            Expression::Return {
-                value,
-                line,
-                column,
-            } => todo!(),
+            Expression::Return { value, .. } => {
+                let result = self.evaluate(*value, environment)?;
+                Ok(KoxValue::Return(Box::new(result)))
+            }
             Expression::Block { expressions, .. } => {
-                let mut result = KoxValue::Nil;
-                let mut environment = environment.child();
-                for expr in expressions {
-                    result = self.evaluate(expr, &mut environment)?;
-                }
-                Ok(result)
+                self.evaluate_program(expressions, &mut environment.child())
             }
             Expression::If {
                 condition,
@@ -391,6 +395,7 @@ pub enum KoxValue {
     Nil,
     NativeFunction(NativeFunction),
     KoxFunction(KoxFunction),
+    Return(Box<KoxValue>),
 }
 
 impl Display for KoxValue {
@@ -403,6 +408,7 @@ impl Display for KoxValue {
             KoxValue::Nil => write!(f, "nil"),
             KoxValue::NativeFunction(function) => write!(f, "<native function>"),
             KoxValue::KoxFunction(function) => write!(f, "<function>"),
+            KoxValue::Return(value) => write!(f, "{}", value),
         }
     }
 }
