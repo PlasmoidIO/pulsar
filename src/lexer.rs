@@ -85,26 +85,6 @@ impl Lexer {
         }
     }
 
-    pub fn lex(input: String) -> Result<Vec<Token>, LexerErrorInfo> {
-        let mut lexer = Lexer::new(input);
-        let mut tokens: Vec<Token> = vec![];
-        let mut token = lexer.next_token();
-        while token != Token::Eof {
-            if let Token::Illegal(err) = token {
-                return Err(LexerErrorInfo {
-                    line: lexer.line,
-                    column: lexer.column,
-                    message: err,
-                });
-            }
-
-            tokens.push(token.clone());
-            token = lexer.next_token();
-        }
-
-        Ok(tokens)
-    }
-
     fn match_next(&mut self, expected: char) -> bool {
         let matched = self.peek() == expected;
         if matched {

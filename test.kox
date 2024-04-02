@@ -1,5 +1,8 @@
-fn thing(name) {
-    print("Hello !");
+fn thing(test) {
+    print("hello " + test);
+    return "Hi";
 }
 
-thing(1);
+let a = if 4 + 2 == 3 { "saif" } else { "umair" };
+let b = thing(a);
+print("returned: " + b);

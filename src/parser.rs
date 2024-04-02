@@ -147,6 +147,19 @@ impl Parser {
 
     fn return_expression(&mut self) -> Result<Expression, ParseError> {
         eat!(self, Token::Return);
+
+        if self.is(Token::Semicolon) {
+            return Ok(Expression::Return {
+                value: Box::new(Expression::Value {
+                    value: Value::Nil,
+                    line: self.line,
+                    column: self.column,
+                }),
+                line: self.line,
+                column: self.column,
+            });
+        }
+
         let value = self.expression()?;
         Ok(Expression::Return {
             value: Box::new(value),
@@ -213,18 +226,21 @@ impl Parser {
 
         let mut semicolon = true;
         while !self.is(Token::RBrace) {
-            if !semicolon {
+            semicolon = false;
+
+            push_program!(self, statements);
+
+            if self.nibble(Token::Semicolon) {
+                semicolon = true;
+                continue;
+            }
+
+            if !self.is(Token::RBrace) {
                 return Err(ParseError {
                     message: "expected semicolon".to_string(),
                     line: self.line,
                     column: self.column,
                 });
-            }
-
-            semicolon = false;
-            push_program!(self, statements);
-            if self.nibble(Token::Semicolon) {
-                semicolon = true;
             }
         }
 
@@ -384,16 +400,6 @@ impl Parser {
 
     fn call(&mut self) -> Result<Expression, ParseError> {
         let callee = self.primary()?;
-
-        // match self.lookahead {
-        //     Token::Int(_) | Token::Float(_) | Token::Ident(_) => {
-        //         return Ok(Expression::Call {
-        //             function: Box::new(callee),
-        //             arguments: vec![self.call()?],
-        //         })
-        //     }
-        //     _ => {}
-        // };
 
         if self.nibble(Token::LParen) {
             let mut args: Vec<Expression> = vec![];

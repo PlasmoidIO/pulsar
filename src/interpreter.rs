@@ -1,6 +1,18 @@
-use std::{collections::HashMap, env, fmt::Display, mem::discriminant};
+use std::{collections::HashMap, fmt::Display, mem::discriminant};
 
 use crate::{ast::Expression, ast::Value, token::Token};
+
+macro_rules! return_check {
+    ($expression: expr) => {
+        match $expression {
+            Ok(value) => match value {
+                KoxValue::Return(value) => return Ok(KoxValue::Return(value)),
+                value => value,
+            },
+            Err(e) => return Err(e),
+        }
+    };
+}
 
 pub struct RuntimeError {
     pub message: String,
@@ -25,6 +37,7 @@ pub struct Interpreter {
 impl Interpreter {
     pub fn new() -> Self {
         let mut env = Environment::new();
+
         env.insert(
             "print".to_string(),
             KoxValue::NativeFunction(NativeFunction {
@@ -35,6 +48,7 @@ impl Interpreter {
                 },
             }),
         );
+
         Self {
             global_environment: env,
         }
@@ -53,8 +67,8 @@ impl Interpreter {
         line: usize,
         column: usize,
     ) -> Result<KoxValue, RuntimeError> {
-        let left = self.evaluate(left, environment)?;
-        let right = self.evaluate(right, environment)?;
+        let left = return_check!(self.evaluate(left, environment));
+        let right = return_check!(self.evaluate(right, environment));
 
         if discriminant(&left) != discriminant(&right) {
             return Err(RuntimeError {
@@ -74,6 +88,7 @@ impl Interpreter {
                 Token::LessThan => Ok(KoxValue::Boolean(left < right)),
                 Token::GreaterThanEqual => Ok(KoxValue::Boolean(left >= right)),
                 Token::LessThanEqual => Ok(KoxValue::Boolean(left <= right)),
+                Token::EqEq => Ok(KoxValue::Boolean(left == right)),
                 _ => Err(RuntimeError {
                     message: format!("Invalid operator for integers: {:?}", operator),
                     line,
@@ -87,6 +102,23 @@ impl Interpreter {
                 Token::Slash => Ok(KoxValue::Float(left / right)),
                 _ => Err(RuntimeError {
                     message: format!("Invalid operator for floats: {:?}", operator),
+                    line,
+                    column,
+                }),
+            },
+            (KoxValue::String(left), KoxValue::String(right)) => match operator {
+                Token::Plus => Ok(KoxValue::String(format!("{}{}", left, right))),
+                _ => Err(RuntimeError {
+                    message: format!("Invalid operator for strings: {:?}", operator),
+                    line,
+                    column,
+                }),
+            },
+            (KoxValue::Boolean(left), KoxValue::Boolean(right)) => match operator {
+                Token::EqEq => Ok(KoxValue::Boolean(left == right)),
+                Token::BangEq => Ok(KoxValue::Boolean(left != right)),
+                _ => Err(RuntimeError {
+                    message: format!("Invalid operator for booleans: {:?}", operator),
                     line,
                     column,
                 }),
@@ -106,10 +138,7 @@ impl Interpreter {
     ) -> Result<KoxValue, RuntimeError> {
         let mut result = KoxValue::Nil;
         for expr in program {
-            result = match self.evaluate(expr, env)? {
-                KoxValue::Return(value) => return Ok(*value),
-                value => value,
-            };
+            result = return_check!(self.evaluate(expr, env))
         }
         Ok(result)
     }
@@ -171,7 +200,12 @@ impl Interpreter {
                     });
                 }
 
-                function.call(self, &args)
+                let result = function.call(self, &args)?;
+                if let KoxValue::Return(return_value) = result {
+                    Ok(*return_value)
+                } else {
+                    Ok(result)
+                }
             }
             Expression::Identifier {
                 ident,
@@ -180,7 +214,7 @@ impl Interpreter {
             } => match environment.get(&ident) {
                 Some(value) => Ok(value.clone()),
                 None => Err(RuntimeError {
-                    message: format!("Undefined variable '{}'", ident),
+                    message: format!("undefined variable referenced '{}'", ident),
                     line,
                     column,
                 }),
@@ -245,24 +279,27 @@ impl Interpreter {
                 name,
                 parameters,
                 body,
-                line,
-                column,
+                ..
             } => {
-                let function = KoxFunction {
-                    arity: parameters.len() as u8,
+                let mut function = KoxFunction {
+                    parameters,
                     body: *body,
                     closure: environment.clone(),
                 };
-                environment.insert(name, KoxValue::KoxFunction(function));
+                function
+                    .closure
+                    .insert(name.clone(), KoxValue::KoxFunction(function.clone()));
+                environment.insert(name.clone(), KoxValue::KoxFunction(function));
                 Ok(KoxValue::Nil)
             }
-            Expression::For {
-                ident,
-                expr,
-                body,
-                line,
-                column,
-            } => todo!(),
+            // Expression::For {
+            //     ident,
+            //     expr,
+            //     body,
+            //     line,
+            //     column,
+            // } => todo!(),
+            _ => todo!(),
         }
     }
 }
@@ -298,14 +335,14 @@ impl Callable for NativeFunction {
 
 #[derive(Clone)]
 pub struct KoxFunction {
-    pub arity: u8,
     pub body: Expression,
     pub closure: Environment,
+    pub parameters: Vec<String>,
 }
 
 impl Callable for KoxFunction {
     fn arity(&self) -> u8 {
-        self.arity
+        self.parameters.len() as u8
     }
 
     fn call(
@@ -313,10 +350,16 @@ impl Callable for KoxFunction {
         interpreter: &mut Interpreter,
         args: &[KoxValue],
     ) -> Result<KoxValue, RuntimeError> {
-        let mut environment = self.closure.child();
-        for (param, arg) in self.closure.venv.keys().zip(args) {
-            environment.insert(param.to_string(), arg.clone());
+        for (key, value) in self.closure.venv.iter() {
+            println!("{}: {}", key, value);
         }
+
+        let mut environment = self.closure.child();
+
+        for (param, arg) in self.parameters.iter().zip(args.iter()) {
+            environment.insert(param.clone(), arg.clone());
+        }
+
         interpreter.evaluate(self.body.clone(), &mut environment)
     }
 }
@@ -406,8 +449,8 @@ impl Display for KoxValue {
             KoxValue::String(s) => write!(f, "{}", s),
             KoxValue::Boolean(b) => write!(f, "{}", b),
             KoxValue::Nil => write!(f, "nil"),
-            KoxValue::NativeFunction(function) => write!(f, "<native function>"),
-            KoxValue::KoxFunction(function) => write!(f, "<function>"),
+            KoxValue::NativeFunction(_) => write!(f, "<native function>"),
+            KoxValue::KoxFunction(_) => write!(f, "<function>"),
             KoxValue::Return(value) => write!(f, "{}", value),
         }
     }

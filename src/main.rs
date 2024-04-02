@@ -28,7 +28,9 @@ fn run_file(filepath: &str) {
     let ast = parser.parse_program();
     match ast {
         Ok(ast) => {
-            // map Vec<Expression> to Vec<String>
+            // output ast to ./ast
+            std::fs::write("./ast", format!("{:#?}", ast)).expect("Unable to write file");
+
             let mut interpreter = Interpreter::new();
             let result = interpreter.evaluate_program(ast, &mut interpreter.global_environment());
             match result {
