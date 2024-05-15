@@ -9,6 +9,8 @@ mod lexer;
 mod parser;
 mod repl;
 mod token;
+mod jit;
+mod transpiler;
 
 fn main() {
     let args: Vec<String> = env::args().collect();

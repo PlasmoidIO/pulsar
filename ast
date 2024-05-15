@@ -1,155 +1,152 @@
 [
     Function {
-        name: "thing",
+        name: "fib",
         parameters: [
-            "test",
+            "n",
         ],
         body: Block {
             expressions: [
-                Call {
-                    function: Identifier {
-                        ident: "print",
-                        line: 2,
-                        column: 10,
-                    },
-                    arguments: [
-                        Binary {
-                            left: Value {
-                                value: String(
-                                    "hello ",
-                                ),
-                                line: 2,
-                                column: 11,
-                            },
-                            operator: Plus,
-                            right: Identifier {
-                                ident: "test",
-                                line: 2,
-                                column: 26,
-                            },
+                If {
+                    condition: Binary {
+                        left: Identifier {
+                            ident: "n",
                             line: 2,
-                            column: 26,
+                            column: 9,
                         },
-                    ],
-                    line: 2,
-                    column: 27,
-                },
-                Return {
-                    value: Value {
-                        value: String(
-                            "Hi",
-                        ),
-                        line: 3,
+                        operator: LessThan,
+                        right: Value {
+                            value: Int(
+                                2,
+                            ),
+                            line: 2,
+                            column: 11,
+                        },
+                        line: 2,
                         column: 11,
                     },
-                    line: 3,
-                    column: 16,
+                    consequence: Block {
+                        expressions: [
+                            Return {
+                                value: Identifier {
+                                    ident: "n",
+                                    line: 3,
+                                    column: 17,
+                                },
+                                line: 3,
+                                column: 17,
+                            },
+                        ],
+                        line: 4,
+                        column: 6,
+                    },
+                    alternative: None,
+                    line: 4,
+                    column: 6,
+                },
+                Return {
+                    value: Binary {
+                        left: Call {
+                            function: Identifier {
+                                ident: "fib",
+                                line: 6,
+                                column: 15,
+                            },
+                            arguments: [
+                                Binary {
+                                    left: Identifier {
+                                        ident: "n",
+                                        line: 6,
+                                        column: 17,
+                                    },
+                                    operator: Minus,
+                                    right: Value {
+                                        value: Int(
+                                            1,
+                                        ),
+                                        line: 6,
+                                        column: 19,
+                                    },
+                                    line: 6,
+                                    column: 21,
+                                },
+                            ],
+                            line: 6,
+                            column: 22,
+                        },
+                        operator: Plus,
+                        right: Call {
+                            function: Identifier {
+                                ident: "fib",
+                                line: 6,
+                                column: 28,
+                            },
+                            arguments: [
+                                Binary {
+                                    left: Identifier {
+                                        ident: "n",
+                                        line: 6,
+                                        column: 30,
+                                    },
+                                    operator: Minus,
+                                    right: Value {
+                                        value: Int(
+                                            2,
+                                        ),
+                                        line: 6,
+                                        column: 32,
+                                    },
+                                    line: 6,
+                                    column: 34,
+                                },
+                            ],
+                            line: 6,
+                            column: 35,
+                        },
+                        line: 6,
+                        column: 35,
+                    },
+                    line: 6,
+                    column: 35,
                 },
                 Value {
                     value: Nil,
-                    line: 3,
-                    column: 17,
+                    line: 6,
+                    column: 36,
                 },
             ],
-            line: 4,
+            line: 7,
             column: 2,
         },
-        line: 4,
+        line: 7,
         column: 2,
-    },
-    Let {
-        name: "a",
-        value: If {
-            condition: Binary {
-                left: Binary {
-                    left: Value {
-                        value: Int(
-                            4,
-                        ),
-                        line: 6,
-                        column: 11,
-                    },
-                    operator: Plus,
-                    right: Value {
-                        value: Int(
-                            2,
-                        ),
-                        line: 6,
-                        column: 15,
-                    },
-                    line: 6,
-                    column: 17,
-                },
-                operator: EqEq,
-                right: Value {
-                    value: Int(
-                        3,
-                    ),
-                    line: 6,
-                    column: 20,
-                },
-                line: 6,
-                column: 22,
-            },
-            consequence: Block {
-                expressions: [
-                    Value {
-                        value: String(
-                            "saif",
-                        ),
-                        line: 6,
-                        column: 24,
-                    },
-                ],
-                line: 6,
-                column: 33,
-            },
-            alternative: Some(
-                Block {
-                    expressions: [
-                        Value {
-                            value: String(
-                                "umair",
-                            ),
-                            line: 6,
-                            column: 40,
-                        },
-                    ],
-                    line: 6,
-                    column: 50,
-                },
-            ),
-            line: 6,
-            column: 50,
-        },
-        line: 6,
-        column: 50,
     },
     Let {
         name: "b",
         value: Call {
             function: Identifier {
-                ident: "thing",
-                line: 7,
-                column: 14,
+                ident: "fib",
+                line: 9,
+                column: 12,
             },
             arguments: [
-                Identifier {
-                    ident: "a",
-                    line: 7,
-                    column: 16,
+                Value {
+                    value: Int(
+                        5,
+                    ),
+                    line: 9,
+                    column: 13,
                 },
             ],
-            line: 7,
-            column: 17,
+            line: 9,
+            column: 15,
         },
-        line: 7,
-        column: 17,
+        line: 9,
+        column: 15,
     },
     Call {
         function: Identifier {
             ident: "print",
-            line: 8,
+            line: 10,
             column: 6,
         },
         arguments: [
@@ -158,20 +155,20 @@
                     value: String(
                         "returned: ",
                     ),
-                    line: 8,
+                    line: 10,
                     column: 7,
                 },
                 operator: Plus,
                 right: Identifier {
                     ident: "b",
-                    line: 8,
+                    line: 10,
                     column: 23,
                 },
-                line: 8,
+                line: 10,
                 column: 23,
             },
         ],
-        line: 8,
+        line: 10,
         column: 24,
     },
 ]

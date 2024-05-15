@@ -350,10 +350,6 @@ impl Callable for KoxFunction {
         interpreter: &mut Interpreter,
         args: &[KoxValue],
     ) -> Result<KoxValue, RuntimeError> {
-        for (key, value) in self.closure.venv.iter() {
-            println!("{}: {}", key, value);
-        }
-
         let mut environment = self.closure.child();
 
         for (param, arg) in self.parameters.iter().zip(args.iter()) {
